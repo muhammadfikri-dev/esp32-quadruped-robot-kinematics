@@ -10,74 +10,60 @@
 
 ---
 
-## 📊 Diagram Blok Arsitektur & Skema Rangkaian
+## 📊 Diagram Blok Arsitektur & Skema Alur Rangkaian
 
-Berikut adalah visualisasi alur daya, interaksi sensor, logika pemrosesan internal, dan aktuasi perlindungan perangkat:
+Visualisasi interaktif alur daya, akuisisi sinyal sensor, pemrosesan algoritma inti, dan aktuasi proteksi perangkat:
 
 ```mermaid
 graph TD
-    subgraph Power_Supply ["⚡ Sumber Daya Listrik (Power Supply)"]
-        PSU["Adapter / Catu Daya 5V-12V"] --> REG["Voltage Regulator / Step-Down 5V & 3.3V"]
-        REG --> MCU["🧠 ESP32 SoC (Dual-Core Xtensa)"]
+    subgraph Sensing_Orientation ["🧭 Sensor Orientasi & Encoder"]
+        IMU["Sensor IMU 6-Axis MPU6050 (I2C)"] -->|"Sudut Roll/Pitch"| MCU["🧠 ESP32 (Dual-Core Xtensa LX6)"]
+        ENC["Magnetic Encoder AS5600"] -->|"Posisi Sudut (I2C)"| MCU
+        ESTOP["Emergency E-Stop Button"] -->|"Interupsi Kritis"| MCU
     end
 
-    subgraph Inputs_Sensors ["📥 Input & Sensor Presisi"]
-        SENS["Sensor Analog / Digital Front-End"] -->|"Sinyal / Bus Data"| MCU
-        ESTOP["Emergency Stop Button (INT)"] -->|"Interupsi Kritis"| MCU
-        ENC["Magnetic Encoder / User Input"] -->|"I2C / SPI / Pulse"| MCU
+    subgraph Kinematics_Core ["🧠 Kinematics & Motion Engine"]
+        MCU -->|"FreeRTOS / Interrupt"| KIN["Analytical Inverse Kinematics"]
+        KIN -->|"S-Curve Profiler"| TRAJ["Trajectory Interpolation"]
+        TRAJ -->|"Closed-Loop PID"| PID["Position & Velocity PID Loop"]
     end
 
-    subgraph Controller_Core ["⚙️ Pemrosesan & Logika Sistem"]
-        MCU -->|"DSP / Kalman Filter"| DSP["Filtering & Kalibrasi"]
-        MCU -->|"Non-Volatile"| NVS["NVS Flash Memory"]
-        MCU -->|"State Machine"| FSM["Failsafe & Control Loop"]
+    subgraph Actuators_Drive ["⚙️ Aktuator & Power Driver"]
+        PID -->|"I2C / Fast PWM"| DRIVER["Motor Driver / PCA9685 Servo Shield"]
+        DRIVER -->|"Daya Motor DC/Servo"| MOTORS["Aktuator Mekanikal Robot (Joints/Wheels)"]
+        MCU -->|"I2C Display"| OLED["Layar Visual Telemetri"]
+        MCU -->|"Teleoperation"| COMM["Wi-Fi Web Joystick / Bluetooth"]
     end
 
-    subgraph Outputs_Actuators ["📤 Output, Aktuator & Proteksi"]
-        MCU -->|"PWM / Digital Out"| RELAY["Modul Relay / Power MOSFET (Beban Kritis)"]
-        MCU -->|"High-Speed I2C"| DISP["Layar OLED / LCD Display"]
-        MCU -->|"Alarm Trigger"| BUZZ["Acoustic Buzzer & Status LED"]
-    end
-
-    subgraph Communication_Telemetry ["📡 Jaringan & Telemetri"]
-        MCU -->|"Wi-Fi / Modbus TCP / MQTT"| TELEM["Telemetry Stream / Cloud Dashboard"]
-    end
-
-    style MCU fill:#1e88e5,stroke:#0d47a1,stroke-width:2px,color:#ffffff
-    style PSU fill:#f4511e,stroke:#bf360c,stroke-width:2px,color:#ffffff
-    style RELAY fill:#43a047,stroke:#1b5e20,stroke-width:2px,color:#ffffff
-    style SENS fill:#8e24aa,stroke:#4a148c,stroke-width:2px,color:#ffffff
-    style DISP fill:#00acc1,stroke:#006064,stroke-width:2px,color:#ffffff
+    style MCU fill:#1565c0,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style KIN fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style DRIVER fill:#bf360c,stroke:#870000,stroke-width:2px,color:#fff
 ```
 
 ---
 
 ## 📦 Daftar Komponen & Bahan Lengkap (Bill of Materials - BOM)
 
-Seluruh bahan yang diperlukan untuk merakit dan mengoperasikan sistem ini secara penuh:
+Berikut rincian spesifikasi komponen fisik dan modul yang dibutuhkan untuk membangun proyek ini:
 
 | No | Nama Komponen / Modul | Estimasi Jumlah | Fungsi & Spesifikasi Teknis |
 |:---|:---|:---|:---|
-| 1 | **ESP32 NodeMCU / Dev Module (30-Pin / 38-Pin)** | 1 Unit | Unit pemroses utama (Microcontroller Unit) |
-| 2 | **Layar OLED 0.96 Inch I2C SSD1306 (128x64)** | 1 Unit | Menampilkan data telemetri, menu, dan status sistem secara visual |
-| 3 | **Motor Driver / Inverter (TMC2209 / TB6612FNG / L298N)** | 1-4 Unit | Penggerak motor presisi dengan proteksi arus |
-| 4 | **Sensor Magnetic Rotary Encoder AS5600 12-Bit** | 1-2 Unit | Umpan balik posisi sudut absolut closed-loop |
-| 5 | **Modul Relay 1-Channel / 4-Channel dengan Optocoupler (5V/10A)** | 1-2 Unit | Isolasi optik pengendali beban tegangan tinggi / kontaktor |
-| 6 | **Active Buzzer 5V & LED Indikator 5mm (Merah, Hijau, Biru)** | 1 Set | Indikator status operasional dan peringatan audio (*audible alarm*) |
-| 7 | **Push Button Emergency Stop (E-Stop) / Tactile Switch** | 2-4 Unit | Tombol darurat dan navigasi menu kalibrasi |
-| 8 | **Resistor Carbon Film (220Ω, 1kΩ, 4.7kΩ, 10kΩ 1/4W)** | 1 Set | Resistor pull-up/pull-down dan pembatas arus LED |
-| 9 | **Kapasitor Keramik (100nF) & Elektrolit (100uF 25V)** | 1 Set | Peredam noise catu daya (*decoupling filter*) |
-| 10 | **Breadboard MB-102 & Kabel Jumper Dupont (Male-Male, Male-Female)** | 1 Set | Kabel penghubung prototipe tanpa solder |
-| 11 | **5V DC via USB-C / MicroUSB atau 7-12V DC via Vin (Disarankan PSU 5V 2A)** | 1 Unit | Sumber daya listrik stabil untuk seluruh rangkaian |
+| 1 | **ESP32 Dev Module (30/38-Pin)** | 1 Unit | Mikrokontroler Dual-Core dengan FreeRTOS, Wi-Fi 2.4GHz & BLE |
+| 2 | **Regulator Step-Down LM2596 / PSU 5V 2A** | 1 Unit | Sumber daya listrik 5V DC teregulasi |
+| 3 | **Driver Motor / Servo Shield (PCA9685 / TB6612FNG / L298N)** | 1-2 Unit | Penggerak motor/servo multi-channel dengan isolasi daya |
+| 4 | **Sensor Sudut Magnetic AS5600 12-Bit / Optical Encoder** | 2-4 Unit | Umpan balik posisi sudut absolut loop tertutup |
+| 5 | **Sensor IMU 6-Axis MPU6050 / BNO055** | 1 Unit | Pengukur percepatan dan kecepatan sudut orientasi robot |
+| 6 | **Layar OLED SSD1306 / LCD 16x2 I2C** | 1 Unit | Display koordinat kinematika dan status kontroler |
+| 7 | **Tombol E-Stop Darurat & Buzzer Alarm 5V** | 1 Set | Sistem proteksi pemutus daya seketika |
 
 ---
 
 ## 🧠 Arsitektur Sistem & Fitur Utama
 
-- **FreeRTOS Multi-Core Priority Scheduling:** Memastikan kontrol loop real-time berkecepatan tinggi tanpa *jitter*.
-- **Digital Signal Processing (DSP) & Filtering:** Dilengkapi algoritma Kalman filtering dan *oversampling* untuk eliminasi *noise* sinyal analog.
-- **Non-Volatile Storage (NVS Preferences):** Parameter kalibrasi, *setpoint*, dan konfigurasi tersimpan secara persisten terhadap pemadaman daya.
-- **Hardware Failsafe & Emergency Interlock:** Perlindungan otomatis jika terjadi anomali tegangan, arus berlebih, atau pemicuan *Emergency Stop*.
+- **FreeRTOS Multi-Core Priority Scheduling:** Memisahkan pemrosesan sinyal presisi tinggi dari task telemetri untuk mencegah *latency jitter*.
+- **Digital Signal Processing (DSP) & Filtering:** Dilengkapi algoritma digital filtering terdedikasi untuk eliminasi derau sinyal analog.
+- **Non-Volatile Storage (NVS Preferences Flash):** Parameter kalibrasi, *setpoint*, dan konfigurasi tersimpan secara persisten terhadap siklus pemadaman daya.
+- **Hardware Failsafe & Emergency Interlock:** Perlindungan otomatis jika terjadi anomali tegangan, kelebihan beban arus, atau pemicuan tombol *Emergency Stop*.
 - **Industrial Telemetry & Diagnostics:** Pelaporan status operasional secara real-time via Serial/JSON stream.
 
 ---
@@ -96,11 +82,11 @@ Seluruh bahan yang diperlukan untuk merakit dan mengoperasikan sistem ini secara
 
 ## 🛠️ Panduan Perakitan Hardware (Langkah Demi Langkah)
 
-1. **Persiapan Catu Daya:** Hubungkan jalur 5V dan GND dari catu daya utama ke *power rail* breadboard. Pasang kapasitor decoupling 100nF dan 100uF secara paralel di dekat pin daya mikrokontroler.
-2. **Pemasangan Sensor:** Hubungkan pin sinyal output sensor ke pin analog mikrokontroler (`GPIO 36`). Pasang resistor pull-up 4.7kΩ jika menggunakan sensor bertipe I2C.
-3. **Pemasangan Aktuator & Relay:** Hubungkan pin kontrol relay ke pin output (`GPIO 26`). Pastikan dioda flyback (1N4007) terpasang paralel pada koil beban induktif untuk meredam lonjakan tegangan balik (*back-EMF*).
-4. **Pemasangan Tombol Emergency Stop:** Hubungkan tombol ke pin interupsi (`GPIO 34`) dengan konfigurasi *Active-LOW* menggunakan internal pull-up.
-5. **Pemeriksaan Akhir:** Ukur tegangan semua jalur menggunakan multimeter sebelum menghubungkan sumber daya untuk mencegah korsleting listrik.
+1. **Persiapan Catu Daya:** Hubungkan catu daya utama ke jalur daya mikrokontroler. Pasang kapasitor *decoupling* 100nF di dekat pin VCC untuk meredam ripple switching.
+2. **Pemasangan Sensor & Modul:** Sambungkan jalur sinyal sensor ke pin mikrokontroler yang telah ditentukan. Gunakan resistor pull-up 4.7kΩ pada jalur SDA/SCL jika menggunakan modul I2C.
+3. **Pemasangan Aktuator:** Hubungkan modul relay / gate driver MOSFET ke pin kontrol output. Pasang dioda *flyback* (1N4007) pada beban induktif untuk mengeliminasi lonjakan tegangan balik (*back-EMF*).
+4. **Pemasangan Tombol Emergency Stop:** Sambungkan tombol darurat ke pin interupsi eksternal dengan konfigurasi *Active-LOW* menggunakan resistor *pull-up*.
+5. **Verifikasi Koneksi:** Lakukan pengecekan jalur ground bersama (*Common Ground*) pada seluruh modul sebelum menyalakan daya.
 
 ---
 
@@ -110,7 +96,7 @@ Seluruh bahan yang diperlukan untuk merakit dan mengoperasikan sistem ini secara
 2. Masuk ke menu **Tools > Board**:
    * Pilih **`ESP32 Dev Module`**.
 3. Pastikan dependensi pustaka terpasang via Library Manager:
-   * `ArduinoJson` (v6 / v7)
+   * `ArduinoJson`
    * `Wire` & `SPI`
    * `Preferences`
 4. Buka berkas [`esp32-quadruped-robot-kinematics.ino`](./esp32-quadruped-robot-kinematics.ino).
